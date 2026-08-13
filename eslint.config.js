@@ -1,0 +1,2 @@
+import js from '@eslint/js';
+export default [js.configs.recommended, { files: ['src/**/*.js','tests/**/*.js'], languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: { document:'readonly', window:'readonly', navigator:'readonly', indexedDB:'readonly', Blob:'readonly', URL:'readonly', crypto:'readonly', setTimeout:'readonly', structuredClone:'readonly', alert:'readonly', FormData:'readonly', queueMicrotask:'readonly', console:'readonly' } }, rules: { 'no-unused-vars':['error',{argsIgnorePattern:'^_'}], 'no-irregular-whitespace':'off' } }];

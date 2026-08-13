@@ -1,0 +1,5 @@
+import {migrateState,cleanPersistentState} from './model.js';
+const DB='kensha-note',STORE='state',KEY='main'; let connection;
+export function openDB(){if(connection)return connection;connection=new Promise((resolve,reject)=>{const q=indexedDB.open(DB,2);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains(STORE))q.result.createObjectStore(STORE);};q.onsuccess=()=>resolve(q.result);q.onerror=()=>{connection=null;reject(q.error);};q.onblocked=()=>{connection=null;reject(new Error('データベース更新がブロックされました'));};});return connection;}
+export async function loadState(){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readonly'),q=tx.objectStore(STORE).get(KEY);q.onsuccess=()=>resolve(q.result?migrateState(q.result):null);q.onerror=()=>reject(q.error);});}
+export async function saveState(state){const db=await openDB();const clean=cleanPersistentState(state);return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(clean,KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('保存に失敗しました'));tx.onabort=()=>reject(tx.error||new Error('保存が中断されました'));});}
