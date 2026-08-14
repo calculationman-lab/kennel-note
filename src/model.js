@@ -49,14 +49,22 @@ export function lightBackupData(data){const clean=cleanPersistentState(data);cle
 export function approximateDataUrlBytes(dataUrl){const body=String(dataUrl||'').split(',')[1]||'';return Math.ceil(body.length*3/4);}
 export function extractOcrCandidates(text){
   const source=String(text||'').replace(/\r/g,''),compact=source.replace(/[\s‐‑‒–—―ー-]+/g,'');
-  const microchip=(compact.match(/\d{15}/g)||[])[0]||'';
-  const dateMatch=source.match(/(20\d{2})\s*[年/.-]\s*(\d{1,2})\s*[月/.-]\s*(\d{1,2})\s*日?/);
-  const date=dateMatch?`${dateMatch[1]}-${String(dateMatch[2]).padStart(2,'0')}-${String(dateMatch[3]).padStart(2,'0')}`:'';
   const lines=source.split('\n').map(x=>x.trim()).filter(Boolean);
+  const exactChip=(compact.match(/\d{15}/g)||[])[0]||'';
+  const chipLine=lines.find(x=>/(?:マイクロ|micro|chip|番号|no[.:：]?)/i.test(x));
+  const chipValue=chipLine?.replace(/^.*?(?:MICROCHIP|MICRO\s*CHIP|マイクロチップ|番号|NO[.:：]?)/i,'')||'';
+  const correctedChip=chipValue.toUpperCase().replace(/[OQD]/g,'0').replace(/[IL|]/g,'1').replace(/S/g,'5').replace(/B/g,'8').replace(/\D/g,'').match(/\d{15}/)?.[0]||'';
+  const microchip=exactChip||correctedChip;
+  const dateMatch=source.match(/(20\d{2})\s*[年/.-]\s*(\d{1,2})\s*[月/.-]\s*(\d{1,2})\s*日?/);
+  const eraMatch=source.match(/令和\s*(\d{1,2})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日?/);
+  const parts=dateMatch?[Number(dateMatch[1]),Number(dateMatch[2]),Number(dateMatch[3])]:eraMatch?[2018+Number(eraMatch[1]),Number(eraMatch[2]),Number(eraMatch[3])]:null;
+  const date=parts?`${parts[0]}-${String(parts[1]).padStart(2,'0')}-${String(parts[2]).padStart(2,'0')}`:'';
   const hospital=lines.find(x=>/(動物病院|アニマルクリニック|ペットクリニック)/.test(x))||'';
-  const vaccine=(source.match(/(?:狂犬病|混合\s*[568]種|犬\s*ジステンパー|パルボ(?:ウイルス)?)/)||[])[0]?.replace(/\s/g,'')||'';
+  const vaccineRaw=(source.match(/(?:狂犬病|混合(?:ワクチン)?\s*[568]種|[568]種\s*混合(?:ワクチン)?|犬\s*ジステンパー|パルボ(?:ウイルス)?)/)||[])[0]?.replace(/\s/g,'')||'';
+  const vaccine=/[568]種/.test(vaccineRaw)?`混合${vaccineRaw.match(/[568]種/)[0]}`:vaccineRaw;
   return {microchip,date,hospital,vaccine,rawText:source.trim()};
 }
+export function ocrConfidenceLevel(value){const n=Number(value)||0;return n>=75?'高':n>=55?'要確認':'低';}
 export function validateBackup(value){
   const errors=[]; if(!value||typeof value!=='object')return {ok:false,errors:['JSONオブジェクトではありません']};
   if(value.kind!=='kensha-note-backup')errors.push('バックアップ種別が違います'); if(value.version!==1)errors.push('バックアップバージョンが未対応です');

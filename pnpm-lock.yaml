@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@tesseract.js-data/eng':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@tesseract.js-data/jpn':
         specifier: ^1.0.0
         version: 1.0.0
@@ -16,6 +19,9 @@ importers:
         version: 0.1.5(@zxing/library@0.21.3)
       tesseract.js:
         specifier: ^7.0.0
+        version: 7.0.0
+      tesseract.js-core:
+        specifier: 7.0.0
         version: 7.0.0
     devDependencies:
       '@eslint/js':
@@ -391,6 +397,9 @@ packages:
     resolution: {integrity: sha512-zD6NdeWEByGE9QF9vCrlJ5YQB4oq9q91kPZS37Jwj5hOkvR1lTBSpsKhKDw4IJtbQ35LsTS1HD9DZYGKIshU1Q==}
     cpu: [x64]
     os: [win32]
+
+  '@tesseract.js-data/eng@1.0.0':
+    resolution: {integrity: sha512-mbTumm6KQPUHyzTPQaF3ObXYnx0SqqfV2nabqFVQBwD6Kl7PhGSLSzOlfFTWy0P3BjghaSKA2W9GB19Jk+ZcTg==}
 
   '@tesseract.js-data/jpn@1.0.0':
     resolution: {integrity: sha512-nUq2xHUjiWE6FRqkvLIIbByLZ39B8qNaBSOnVP4XIKGPKtZ1e0hiRnK7WhPfl8A+Fe7aNE1u/QoXXUym3TbSCA==}
@@ -1048,6 +1057,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.62.4':
     optional: true
+
+  '@tesseract.js-data/eng@1.0.0': {}
 
   '@tesseract.js-data/jpn@1.0.0': {}
 

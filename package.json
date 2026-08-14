@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare:ocr": "node scripts/prepare-ocr-assets.mjs",
+    "predev": "pnpm prepare:ocr",
     "dev": "vite --host 0.0.0.0",
+    "prebuild": "pnpm prepare:ocr",
     "build": "vite build --base=./",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test",
@@ -12,9 +15,11 @@
     "lint": "eslint src tests"
   },
   "dependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
     "@tesseract.js-data/jpn": "^1.0.0",
     "@zxing/browser": "^0.1.5",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "tesseract.js-core": "7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
