@@ -36,6 +36,7 @@ export function createPuppies(birth,mother,father=null){
   return [...Array(Number(birth.maleCount))].map((_,i)=>make('オス',i)).concat([...Array(Number(birth.femaleCount))].map((_,i)=>make('メス',i)));
 }
 export function duplicateChip(dogs,chip,except=''){const value=String(chip||'').trim();return value?dogs.find(d=>d.microchip===value&&d.id!==except&&!d.deletedAt):undefined;}
+export function normalizeScannedCode(value){return String(value??'').trim().replace(/\s+/g,'');}
 export function migrateState(raw){
   const base=seedData(); if(!raw||typeof raw!=='object')return base; const next={...base,...raw};
   for(const key of REQUIRED_COLLECTIONS)next[key]=Array.isArray(raw[key])?raw[key]:[];

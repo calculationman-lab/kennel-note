@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {localDate,ageOn,dueDateFromMating,birthCount,validateBirth,createPuppies,duplicateChip,inspectionStatus,canSaveInspection,validateBackup,cleanPersistentState,annualSummary,seedData,migrateState,priorityKey,dismissPriority,isPriorityDismissed,visiblePriorities,restoreDismissedPriorities,priorityHomeView} from '../src/model.js';
+import {localDate,ageOn,dueDateFromMating,birthCount,validateBirth,createPuppies,duplicateChip,normalizeScannedCode,inspectionStatus,canSaveInspection,validateBackup,cleanPersistentState,annualSummary,seedData,migrateState,priorityKey,dismissPriority,isPriorityDismissed,visiblePriorities,restoreDismissedPriorities,priorityHomeView} from '../src/model.js';
 
 test('ローカル日付は端末時刻の年月日を返す',()=>{assert.equal(localDate(new Date(2026,7,13,0,10)),'2026-08-13');assert.equal(localDate(new Date(2026,7,13,8,10)),'2026-08-13');assert.equal(localDate(new Date(2026,7,13,15,10)),'2026-08-13');});
 test('年齢を日付だけで計算する',()=>assert.deepEqual(ageOn('2020-05-10',new Date(2026,7,13,0,10)),{years:6,months:3}));
@@ -8,6 +8,7 @@ test('出産回数を履歴から集計する',()=>assert.equal(birthCount('m',[
 test('出産頭数の整合性を検証する',()=>{assert.equal(validateBirth({maleCount:2,femaleCount:3,healthyCount:5,illCount:0,deadCount:0}),'');assert.match(validateBirth({maleCount:2,femaleCount:3,healthyCount:4,illCount:0,deadCount:0}),/一致しません/);});
 test('父母ID付きで性別数どおり子犬を作る',()=>{const xs=createPuppies({maleCount:2,femaleCount:3,date:'2026-08-13',litterId:'l',fatherId:'f'},{id:'m',name:'母犬'},{id:'f'});assert.equal(xs.length,5);assert.equal(xs.filter(x=>x.sex==='オス').length,2);assert.ok(xs.every(x=>x.motherId==='m'&&x.fatherId==='f'&&x.litterId==='l'));});
 test('マイクロチップ重複を検出し空欄は除外する',()=>{assert.equal(duplicateChip(seedData().dogs,'SAMPLE-CHIP-001').id,'dog_sora');assert.equal(duplicateChip(seedData().dogs,''),undefined);});
+test('読み取ったコードは前後と途中の空白を除去する',()=>{assert.equal(normalizeScannedCode(' 392 123 456 789 012 '),'392123456789012');assert.equal(normalizeScannedCode(null),'');});
 test('1日2回の点検回数を任意日時で判定する',()=>{const now=new Date(2026,7,13,8);assert.equal(inspectionStatus([],now).nextRound,1);assert.equal(inspectionStatus([{date:'2026-08-13',round:1}],now).nextRound,2);assert.equal(inspectionStatus([{date:'2026-08-13',round:1},{date:'2026-08-13',round:2}],now).complete,true);});
 test('2回完了後と同一回の重複を防ぐ',()=>{const xs=[{date:'2026-08-13',round:1},{date:'2026-08-13',round:2}];assert.equal(canSaveInspection(xs,'2026-08-13',1),false);assert.equal(canSaveInspection(xs,'2026-08-13',2),false);});
 test('正常なバックアップを検証する',()=>{const data=seedData(),r=validateBackup({kind:'kensha-note-backup',version:1,data});assert.equal(r.ok,true);assert.equal(r.summary.dogs,8);});
