@@ -18,3 +18,9 @@ test('犬詳細で保存画像件数を確認できる',()=>{
   assert.match(appSource,/その他（\$\{attachments\.length\}）/);
   assert.match(appSource,/保存した書類（\$\{attachments\.length\}件）/);
 });
+
+test('京都府参考様式の入力と5帳簿出力を提供する',()=>{
+  for(const text of ['京都府・事業者情報','京都府・個体帳簿情報','個体管理帳簿','繁殖実施状況記録台帳','飼養施設・動物点検台帳','取引状況記録台帳','定期報告届出集計'])assert.match(appSource,new RegExp(text));
+  assert.match(appSource,/相手方の関係法令遵守状況/);
+  assert.match(appSource,/PDF保存・印刷/);
+});

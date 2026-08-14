@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 export const REQUIRED_COLLECTIONS = ['dogs','health','inspections','breeding','births','pickups','attachments'];
 
 const SAMPLE_PHOTO = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"%3E%3Crect width="120" height="120" rx="24" fill="%23dfe9df"/%3E%3Ccircle cx="60" cy="63" r="34" fill="%2397b59f"/%3E%3Ccircle cx="47" cy="58" r="4" fill="%23315c4a"/%3E%3Ccircle cx="73" cy="58" r="4" fill="%23315c4a"/%3E%3Cpath d="M52 74q8 8 16 0" fill="none" stroke="%23315c4a" stroke-width="4" stroke-linecap="round"/%3E%3Cpath d="M30 38l18 12M90 38L72 50" stroke="%2397b59f" stroke-width="16" stroke-linecap="round"/%3E%3C/svg%3E';
@@ -32,7 +32,7 @@ export function priorityHomeView(items,limit=5){return {items:items.slice(0,limi
 export function canSaveInspection(inspections,date,round){return !inspections.some(x=>x.date===date&&Number(x.round)===Number(round)&&!x.deletedAt);}
 export function validateBirth({maleCount,femaleCount,healthyCount,illCount,deadCount}) {const total=Number(maleCount)+Number(femaleCount),outcomes=Number(healthyCount)+Number(illCount)+Number(deadCount);return total===outcomes?'':`性別の合計（${total}頭）と状態の合計（${outcomes}頭）が一致しません`;}
 export function createPuppies(birth,mother,father=null){
-  const make=(sex,i)=>({id:id('dog'),name:`${mother.name}の${sex==='オス'?'男':'女'}の子${i+1}`,sex,birthDate:birth.date,status:'子犬',motherId:mother.id,fatherId:father?.id||birth.fatherId||'',litterId:birth.litterId,ribbon:'未設定',photo:SAMPLE_PHOTO,sample:false,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),deletedAt:null});
+  const make=(sex,i)=>({id:id('dog'),name:`${mother.name}の${sex==='オス'?'男':'女'}の子${i+1}`,sex,birthDate:birth.date,breed:mother.breed||'',breedCertainty:mother.breedCertainty||'確定',ownedDate:birth.date,ownedCount:1,acquisitionType:'繁殖者',status:'子犬',motherId:mother.id,fatherId:father?.id||birth.fatherId||'',litterId:birth.litterId,ribbon:'未設定',photo:SAMPLE_PHOTO,sample:false,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),deletedAt:null});
   return [...Array(Number(birth.maleCount))].map((_,i)=>make('オス',i)).concat([...Array(Number(birth.femaleCount))].map((_,i)=>make('メス',i)));
 }
 export function duplicateChip(dogs,chip,except=''){const value=String(chip||'').trim();return value?dogs.find(d=>d.microchip===value&&d.id!==except&&!d.deletedAt):undefined;}
@@ -40,7 +40,7 @@ export function normalizeScannedCode(value){return String(value??'').trim().repl
 export function migrateState(raw){
   const base=seedData(); if(!raw||typeof raw!=='object')return base; const next={...base,...raw};
   for(const key of REQUIRED_COLLECTIONS)next[key]=Array.isArray(raw[key])?raw[key]:[];
-  next.schemaVersion=SCHEMA_VERSION; next.uiPreferences=normalizePreferences(raw.uiPreferences); next.dogs=next.dogs.map(d=>({...d,photo:d.photo||SAMPLE_PHOTO,createdAt:d.createdAt||new Date().toISOString(),updatedAt:d.updatedAt||d.createdAt||new Date().toISOString(),deletedAt:d.deletedAt||null}));
+  next.schemaVersion=SCHEMA_VERSION; next.uiPreferences=normalizePreferences(raw.uiPreferences);next.settings={...base.settings,...raw.settings,animalBusinessType:raw.settings?.animalBusinessType||'販売'}; next.dogs=next.dogs.map(d=>({...d,breed:d.breed||'',breedCertainty:d.breedCertainty||'確定',ownedDate:d.ownedDate||'',ownedCount:Number(d.ownedCount||1),acquisitionType:d.acquisitionType||'繁殖者',acquisitionName:d.acquisitionName||'',acquisitionRegistration:d.acquisitionRegistration||'',acquisitionAddress:d.acquisitionAddress||'',photo:d.photo||SAMPLE_PHOTO,createdAt:d.createdAt||new Date().toISOString(),updatedAt:d.updatedAt||d.createdAt||new Date().toISOString(),deletedAt:d.deletedAt||null}));
   next.health=next.health.map(h=>({...h,attachmentStatus:h.attachmentStatus||'未添付'}));next.attachments=next.attachments.filter(a=>a&&a.id&&a.dogId&&a.dataUrl).map(a=>({...a,kind:a.kind||'その他書類',createdAt:a.createdAt||new Date().toISOString()})); delete next.undo; return next;
 }
 export function cleanPersistentState(value){const clean=structuredClone(value);delete clean.undo;return clean;}
@@ -70,7 +70,7 @@ export function buildCsv(headers,rows){return '\uFEFF'+[headers,...rows].map(row
 export function validateBackup(value){
   const errors=[]; if(!value||typeof value!=='object')return {ok:false,errors:['JSONオブジェクトではありません']};
   if(value.kind!=='kensha-note-backup')errors.push('バックアップ種別が違います'); if(value.version!==1)errors.push('バックアップバージョンが未対応です');
-  const data=value.data; if(!data||![1,2,3,4].includes(data.schemaVersion))errors.push('スキーマバージョンが未対応です');
+  const data=value.data; if(!data||![1,2,3,4,5].includes(data.schemaVersion))errors.push('スキーマバージョンが未対応です');
   if(data)for(const key of REQUIRED_COLLECTIONS)if(!Array.isArray(data[key]))errors.push(`${key}が配列ではありません`);
   if(!errors.length){const ids=new Set();for(const d of data.dogs){if(!d.id)errors.push('IDのない犬があります');else if(ids.has(d.id))errors.push(`犬IDが重複しています: ${d.id}`);ids.add(d.id);}for(const h of data.health)if(!ids.has(h.dogId))errors.push(`健康記録の対象犬がありません: ${h.dogId}`);for(const p of data.pickups)if(!ids.has(p.dogId))errors.push(`お迎え記録の対象犬がありません: ${p.dogId}`);for(const a of data.attachments)if(!ids.has(a.dogId))errors.push(`添付画像の対象犬がありません: ${a.dogId}`);}
   return {ok:errors.length===0,errors,summary:errors.length?null:backupSummary(data)};
@@ -80,6 +80,7 @@ export function annualSummary(state,year){
   const registered=state.dogs.filter(d=>d.createdAt&&localDate(d.createdAt)>=start&&localDate(d.createdAt)<=end).length,transferred=state.pickups.filter(p=>p.status==='完了'&&p.actualDate>=start&&p.actualDate<=end).length,deaths=state.dogs.filter(d=>d.deathDate>=start&&d.deathDate<=end).length;
   return {year,startCount:activeAtStart,registered,transferred,deaths,endCount:Math.max(0,activeAtStart+registered-transferred-deaths),needsReview:state.dogs.some(d=>!d.createdAt)};
 }
+export function kyotoAnnualReport(state,year){const start=`${year}-04-01`,end=`${year+1}-03-31`,months=[4,5,6,7,8,9,10,11,12,1,2,3],monthKey=date=>{const value=String(date||'').slice(0,10);if(!value||value<start||value>end)return'';return String(Number(value.slice(5,7)));},transferredBefore=(dogId,date)=>state.pickups.some(p=>p.dogId===dogId&&p.status==='完了'&&(p.actualDate||p.date)<=date),activeAt=date=>state.dogs.filter(d=>!d.deletedAt&&d.birthDate<=date&&d.ownedDate&&d.ownedDate<=date&&(!d.deathDate||d.deathDate>date)&&!transferredBefore(d.id,date)).length,acquired=Object.fromEntries(months.map(m=>[m,0])),transferred=Object.fromEntries(months.map(m=>[m,0])),deaths=Object.fromEntries(months.map(m=>[m,0]));for(const d of state.dogs){const acquiredKey=monthKey(d.ownedDate);if(acquiredKey)acquired[acquiredKey]++;const deathKey=monthKey(d.deathDate);if(deathKey)deaths[deathKey]++;}for(const p of state.pickups){if(p.status!=='完了')continue;const transferKey=monthKey(p.actualDate||p.date);if(transferKey)transferred[transferKey]++;}const needsReview=state.dogs.filter(d=>!d.deletedAt&&(!d.ownedDate||!d.breed)).map(d=>d.name);return {year,start,end,needsReview,startCount:activeAt(start),endCount:activeAt(end),months,acquired,transferred,deaths,breeds:[...new Set(state.dogs.map(d=>d.breed).filter(Boolean))]};}
 export function seedData(){
   const nowIso=new Date().toISOString(); const dog=(x)=>({...x,photo:SAMPLE_PHOTO,sample:true,createdAt:nowIso,updatedAt:nowIso,deletedAt:null});
   const dogs=[dog({id:'dog_sora',name:'ソラ（サンプル）',sex:'オス',birthDate:'2021-03-12',status:'成犬',ribbon:'ブルー',microchip:'SAMPLE-CHIP-001'}),dog({id:'dog_hana',name:'ハナ（サンプル）',sex:'メス',birthDate:'2020-05-10',status:'繁殖中',ribbon:'ピンク',microchip:'SAMPLE-CHIP-002'}),dog({id:'dog_coco',name:'ココ（サンプル）',sex:'メス',birthDate:'2022-01-20',status:'出産待ち',ribbon:'イエロー',microchip:'SAMPLE-CHIP-003'}),...['赤','青','緑','紫','白'].map((r,i)=>dog({id:`dog_p${i+1}`,name:`むぎ${i+1}（サンプル）`,sex:i<2?'オス':'メス',birthDate:'2026-06-18',status:i===0?'お迎え待ち':'子犬',ribbon:`${r}リボン`,litterId:'litter_1',motherId:'dog_hana',fatherId:'dog_sora'}))];
