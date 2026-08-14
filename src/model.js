@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const REQUIRED_COLLECTIONS = ['dogs','health','inspections','breeding','births','pickups','attachments'];
 
 const SAMPLE_PHOTO = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"%3E%3Crect width="120" height="120" rx="24" fill="%23dfe9df"/%3E%3Ccircle cx="60" cy="63" r="34" fill="%2397b59f"/%3E%3Ccircle cx="47" cy="58" r="4" fill="%23315c4a"/%3E%3Ccircle cx="73" cy="58" r="4" fill="%23315c4a"/%3E%3Cpath d="M52 74q8 8 16 0" fill="none" stroke="%23315c4a" stroke-width="4" stroke-linecap="round"/%3E%3Cpath d="M30 38l18 12M90 38L72 50" stroke="%2397b59f" stroke-width="16" stroke-linecap="round"/%3E%3C/svg%3E';
@@ -41,16 +41,18 @@ export function migrateState(raw){
   const base=seedData(); if(!raw||typeof raw!=='object')return base; const next={...base,...raw};
   for(const key of REQUIRED_COLLECTIONS)next[key]=Array.isArray(raw[key])?raw[key]:[];
   next.schemaVersion=SCHEMA_VERSION; next.uiPreferences=normalizePreferences(raw.uiPreferences); next.dogs=next.dogs.map(d=>({...d,photo:d.photo||SAMPLE_PHOTO,createdAt:d.createdAt||new Date().toISOString(),updatedAt:d.updatedAt||d.createdAt||new Date().toISOString(),deletedAt:d.deletedAt||null}));
-  next.health=next.health.map(h=>({...h,attachmentStatus:h.attachmentStatus||'未添付'})); delete next.undo; return next;
+  next.health=next.health.map(h=>({...h,attachmentStatus:h.attachmentStatus||'未添付'}));next.attachments=next.attachments.filter(a=>a&&a.id&&a.dogId&&a.dataUrl).map(a=>({...a,kind:a.kind||'その他書類',createdAt:a.createdAt||new Date().toISOString()})); delete next.undo; return next;
 }
 export function cleanPersistentState(value){const clean=structuredClone(value);delete clean.undo;return clean;}
-export function backupSummary(data){return {dogs:data.dogs.filter(x=>!x.deletedAt).length,health:data.health.length,inspections:data.inspections.length,breeding:data.breeding.length,births:data.births.length,pickups:data.pickups.length};}
+export function backupSummary(data){return {dogs:data.dogs.filter(x=>!x.deletedAt).length,health:data.health.length,inspections:data.inspections.length,breeding:data.breeding.length,births:data.births.length,pickups:data.pickups.length,attachments:data.attachments?.length||0};}
+export function lightBackupData(data){const clean=cleanPersistentState(data);clean.attachments=[];clean.health=clean.health.map(h=>({...h,attachmentStatus:'未添付'}));return clean;}
+export function approximateDataUrlBytes(dataUrl){const body=String(dataUrl||'').split(',')[1]||'';return Math.ceil(body.length*3/4);}
 export function validateBackup(value){
   const errors=[]; if(!value||typeof value!=='object')return {ok:false,errors:['JSONオブジェクトではありません']};
   if(value.kind!=='kensha-note-backup')errors.push('バックアップ種別が違います'); if(value.version!==1)errors.push('バックアップバージョンが未対応です');
-  const data=value.data; if(!data||![1,2].includes(data.schemaVersion))errors.push('スキーマバージョンが未対応です');
+  const data=value.data; if(!data||![1,2,3].includes(data.schemaVersion))errors.push('スキーマバージョンが未対応です');
   if(data)for(const key of REQUIRED_COLLECTIONS)if(!Array.isArray(data[key]))errors.push(`${key}が配列ではありません`);
-  if(!errors.length){const ids=new Set();for(const d of data.dogs){if(!d.id)errors.push('IDのない犬があります');else if(ids.has(d.id))errors.push(`犬IDが重複しています: ${d.id}`);ids.add(d.id);}for(const h of data.health)if(!ids.has(h.dogId))errors.push(`健康記録の対象犬がありません: ${h.dogId}`);for(const p of data.pickups)if(!ids.has(p.dogId))errors.push(`お迎え記録の対象犬がありません: ${p.dogId}`);}
+  if(!errors.length){const ids=new Set();for(const d of data.dogs){if(!d.id)errors.push('IDのない犬があります');else if(ids.has(d.id))errors.push(`犬IDが重複しています: ${d.id}`);ids.add(d.id);}for(const h of data.health)if(!ids.has(h.dogId))errors.push(`健康記録の対象犬がありません: ${h.dogId}`);for(const p of data.pickups)if(!ids.has(p.dogId))errors.push(`お迎え記録の対象犬がありません: ${p.dogId}`);for(const a of data.attachments)if(!ids.has(a.dogId))errors.push(`添付画像の対象犬がありません: ${a.dogId}`);}
   return {ok:errors.length===0,errors,summary:errors.length?null:backupSummary(data)};
 }
 export function annualSummary(state,year){
