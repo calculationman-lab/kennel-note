@@ -1,4 +1,4 @@
-const CACHE='kensha-note-shell-v10-1-high-accuracy-ocr';
+const CACHE='kensha-note-shell-v11-ledger-export';
 const SHELL=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./ocr/worker.min.js','./ocr/lang/jpn.traineddata.gz','./ocr/lang/eng.traineddata.gz','./ocr/core/tesseract-core-lstm.wasm.js','./ocr/core/tesseract-core-simd-lstm.wasm.js','./ocr/core/tesseract-core-relaxedsimd-lstm.wasm.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('kensha-note-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

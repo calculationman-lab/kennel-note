@@ -65,6 +65,8 @@ export function extractOcrCandidates(text){
   return {microchip,date,hospital,vaccine,rawText:source.trim()};
 }
 export function ocrConfidenceLevel(value){const n=Number(value)||0;return n>=75?'高':n>=55?'要確認':'低';}
+export function csvCell(value){const text=String(value??'');return /[",\r\n]/.test(text)?`"${text.replace(/"/g,'""')}"`:text;}
+export function buildCsv(headers,rows){return '\uFEFF'+[headers,...rows].map(row=>row.map(csvCell).join(',')).join('\r\n');}
 export function validateBackup(value){
   const errors=[]; if(!value||typeof value!=='object')return {ok:false,errors:['JSONオブジェクトではありません']};
   if(value.kind!=='kensha-note-backup')errors.push('バックアップ種別が違います'); if(value.version!==1)errors.push('バックアップバージョンが未対応です');
