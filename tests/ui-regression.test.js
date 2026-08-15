@@ -60,8 +60,9 @@ test('v13.2は交配・妊娠・出産を1画面に統合する',()=>{
   assert.match(appSource,/loaded\?migrateState\(loaded\):seedData\(\)/);
 });
 
-test('v13.3は引き渡し管理と3週間予定を統合する',()=>{
-  for(const text of ['引き渡しを記録','引き渡し予定日','引き渡し完了','オークションで販売した','お残し','最低引き渡し日齢','引き渡し可能予定','月曜始まり'])assert.match(appSource,new RegExp(text));
+test('v13.3は引き渡し管理とシンプルな引き渡し可能一覧を統合する',()=>{
+  for(const text of ['引き渡しを記録','引き渡し予定日','引き渡し完了','オークションで販売した','お残し','最低引き渡し日齢','引き渡し可能'])assert.match(appSource,new RegExp(text));
+  assert.doesNotMatch(appSource,/今週|来週|再来週|最低日齢 .*月曜始まり/);
   assert.doesNotMatch(appSource,/pickupPlan|pickupComplete/);
   assert.doesNotMatch(appSource,/お迎え/);
   assert.match(styleSource,/input\[type="date"\].*inline-size:100%/);
