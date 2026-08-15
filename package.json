@@ -1,6 +1,6 @@
 {
   "name": "kensha-note",
-  "version": "12.1.2",
+  "version": "13.0.0",
   "private": true,
   "type": "module",
   "scripts": {

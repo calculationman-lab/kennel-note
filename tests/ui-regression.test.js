@@ -37,3 +37,9 @@ test('交配の父母は候補付き自由入力で横スクロールを発生�
   assert.match(appSource,/登録済みの犬を選ぶか、名前を自由入力できます/);
   assert.doesNotMatch(appSource,/select\('母犬','motherId'/);
 });
+
+test('v13の法令・運用ルールを設定して警告と帳簿へ反映する',()=>{
+  for(const text of ['法令・運用ルールを設定','母犬の交配下限','生涯出産回数の上限','記録保存期間','繁殖台帳へ出力する任意項目','設定ルールの警告です'])assert.match(appSource,new RegExp(text));
+  assert.match(appSource,/applyLedgerRules/);
+  assert.match(appSource,/保存自体は禁止しません/);
+});
