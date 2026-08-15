@@ -49,3 +49,12 @@ test('v13.1の出産間隔・適用日・根拠メモ・変更履歴を提供す
   assert.match(appSource,/lastBirthDate/);
   assert.match(appSource,/ruleHistory=normalizeRuleHistory/);
 });
+
+test('v13.2は交配・妊娠・出産を1画面に統合する',()=>{
+  for(const text of ['交配・妊娠・出産を記録','妊娠を確認','出産場所','動物病院名','帝王切開','疾病・要観察数'])assert.match(appSource,new RegExp(text));
+  assert.doesNotMatch(appSource,/name="matingTime"/);
+  assert.doesNotMatch(appSource,/name="matingHandler"/);
+  assert.match(appSource,/form:'matingEdit'/);
+  assert.match(appSource,/data-birth-hospital-wrap/);
+  assert.match(appSource,/loaded\?migrateState\(loaded\):seedData\(\)/);
+});
