@@ -24,3 +24,9 @@ test('京都府参考様式の入力と5帳簿出力を提供する',()=>{
   assert.match(appSource,/相手方の関係法令遵守状況/);
   assert.match(appSource,/PDF保存・印刷/);
 });
+
+test('複数交配日の追加・削除・編集と予定期間を提供する',()=>{
+  for(const text of ['＋交配日を追加','data-remove-mating-date','matingEdit','出産予定期間','獣医師等が確認した出産予定日'])assert.match(appSource,new RegExp(text));
+  assert.match(appSource,/同じ交配日は重複登録できません/);
+  assert.match(appSource,/matingDates\(x\)\.map\(v=>v\.date\)\.join/);
+});

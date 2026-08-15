@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 export const REQUIRED_COLLECTIONS = ['dogs','health','inspections','breeding','births','pickups','attachments'];
 
 const SAMPLE_PHOTO = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"%3E%3Crect width="120" height="120" rx="24" fill="%23dfe9df"/%3E%3Ccircle cx="60" cy="63" r="34" fill="%2397b59f"/%3E%3Ccircle cx="47" cy="58" r="4" fill="%23315c4a"/%3E%3Ccircle cx="73" cy="58" r="4" fill="%23315c4a"/%3E%3Cpath d="M52 74q8 8 16 0" fill="none" stroke="%23315c4a" stroke-width="4" stroke-linecap="round"/%3E%3Cpath d="M30 38l18 12M90 38L72 50" stroke="%2397b59f" stroke-width="16" stroke-linecap="round"/%3E%3C/svg%3E';
@@ -13,6 +13,15 @@ export function parseLocalDate(value) {
 }
 export function addDays(value, days) { const d=parseLocalDate(value); d.setDate(d.getDate()+days); return localDate(d); }
 export const dueDateFromMating = value => addDays(value,63);
+export function normalizeMatingDates(value,legacyDate=''){
+  const source=Array.isArray(value)?value:(legacyDate?[legacyDate]:[]),seen=new Set(),result=[];
+  for(const entry of source){const item=typeof entry==='string'?{date:entry}:entry,date=String(item?.date||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||seen.has(date))continue;seen.add(date);result.push({id:item.id||id('mdate'),date,method:item.method||'自然交配',time:item.time||'',handler:item.handler||'',memo:item.memo||''});}
+  return result.sort((a,b)=>a.date.localeCompare(b.date));
+}
+export function matingDueWindow(value,legacyDate=''){
+  const dates=normalizeMatingDates(value,legacyDate);if(!dates.length)return {firstDate:'',lastDate:'',dueDateStart:'',dueDateEnd:''};
+  return {firstDate:dates[0].date,lastDate:dates.at(-1).date,dueDateStart:dueDateFromMating(dates[0].date),dueDateEnd:dueDateFromMating(dates.at(-1).date)};
+}
 export function ageOn(birthDate, now = new Date()) {
   const birth=parseLocalDate(birthDate), current=now instanceof Date?now:parseLocalDate(now); let years=current.getFullYear()-birth.getFullYear(), months=current.getMonth()-birth.getMonth();
   if(current.getDate()<birth.getDate())months--; if(months<0){years--;months+=12;} return {years,months};
@@ -41,6 +50,7 @@ export function migrateState(raw){
   const base=seedData(); if(!raw||typeof raw!=='object')return base; const next={...base,...raw};
   for(const key of REQUIRED_COLLECTIONS)next[key]=Array.isArray(raw[key])?raw[key]:[];
   next.schemaVersion=SCHEMA_VERSION; next.uiPreferences=normalizePreferences(raw.uiPreferences);next.settings={...base.settings,...raw.settings,animalBusinessType:raw.settings?.animalBusinessType||'販売'}; next.dogs=next.dogs.map(d=>({...d,breed:d.breed||'',breedCertainty:d.breedCertainty||'確定',ownedDate:d.ownedDate||'',ownedCount:Number(d.ownedCount||1),acquisitionType:d.acquisitionType||'繁殖者',acquisitionName:d.acquisitionName||'',acquisitionRegistration:d.acquisitionRegistration||'',acquisitionAddress:d.acquisitionAddress||'',photo:d.photo||SAMPLE_PHOTO,createdAt:d.createdAt||new Date().toISOString(),updatedAt:d.updatedAt||d.createdAt||new Date().toISOString(),deletedAt:d.deletedAt||null}));
+  next.breeding=next.breeding.map(b=>{const matingDates=normalizeMatingDates(b.matingDates,b.matingDate),window=matingDueWindow(matingDates);return {...b,matingDates,matingDate:window.firstDate,dueDateStart:window.dueDateStart,dueDateEnd:window.dueDateEnd,dueDate:window.dueDateStart,confirmedDueDate:b.confirmedDueDate||'',confirmedDueDateBasis:b.confirmedDueDateBasis||''};});
   next.health=next.health.map(h=>({...h,attachmentStatus:h.attachmentStatus||'未添付'}));next.attachments=next.attachments.filter(a=>a&&a.id&&a.dogId&&a.dataUrl).map(a=>({...a,kind:a.kind||'その他書類',createdAt:a.createdAt||new Date().toISOString()})); delete next.undo; return next;
 }
 export function cleanPersistentState(value){const clean=structuredClone(value);delete clean.undo;return clean;}
@@ -70,7 +80,7 @@ export function buildCsv(headers,rows){return '\uFEFF'+[headers,...rows].map(row
 export function validateBackup(value){
   const errors=[]; if(!value||typeof value!=='object')return {ok:false,errors:['JSONオブジェクトではありません']};
   if(value.kind!=='kensha-note-backup')errors.push('バックアップ種別が違います'); if(value.version!==1)errors.push('バックアップバージョンが未対応です');
-  const data=value.data; if(!data||![1,2,3,4,5].includes(data.schemaVersion))errors.push('スキーマバージョンが未対応です');
+  const data=value.data; if(!data||![1,2,3,4,5,6].includes(data.schemaVersion))errors.push('スキーマバージョンが未対応です');
   if(data)for(const key of REQUIRED_COLLECTIONS)if(!Array.isArray(data[key]))errors.push(`${key}が配列ではありません`);
   if(!errors.length){const ids=new Set();for(const d of data.dogs){if(!d.id)errors.push('IDのない犬があります');else if(ids.has(d.id))errors.push(`犬IDが重複しています: ${d.id}`);ids.add(d.id);}for(const h of data.health)if(!ids.has(h.dogId))errors.push(`健康記録の対象犬がありません: ${h.dogId}`);for(const p of data.pickups)if(!ids.has(p.dogId))errors.push(`お迎え記録の対象犬がありません: ${p.dogId}`);for(const a of data.attachments)if(!ids.has(a.dogId))errors.push(`添付画像の対象犬がありません: ${a.dogId}`);}
   return {ok:errors.length===0,errors,summary:errors.length?null:backupSummary(data)};
@@ -84,5 +94,5 @@ export function kyotoAnnualReport(state,year){const start=`${year}-04-01`,end=`$
 export function seedData(){
   const nowIso=new Date().toISOString(); const dog=(x)=>({...x,photo:SAMPLE_PHOTO,sample:true,createdAt:nowIso,updatedAt:nowIso,deletedAt:null});
   const dogs=[dog({id:'dog_sora',name:'ソラ（サンプル）',sex:'オス',birthDate:'2021-03-12',status:'成犬',ribbon:'ブルー',microchip:'SAMPLE-CHIP-001'}),dog({id:'dog_hana',name:'ハナ（サンプル）',sex:'メス',birthDate:'2020-05-10',status:'繁殖中',ribbon:'ピンク',microchip:'SAMPLE-CHIP-002'}),dog({id:'dog_coco',name:'ココ（サンプル）',sex:'メス',birthDate:'2022-01-20',status:'出産待ち',ribbon:'イエロー',microchip:'SAMPLE-CHIP-003'}),...['赤','青','緑','紫','白'].map((r,i)=>dog({id:`dog_p${i+1}`,name:`むぎ${i+1}（サンプル）`,sex:i<2?'オス':'メス',birthDate:'2026-06-18',status:i===0?'お迎え待ち':'子犬',ribbon:`${r}リボン`,litterId:'litter_1',motherId:'dog_hana',fatherId:'dog_sora'}))];
-  return {schemaVersion:SCHEMA_VERSION,dogs,health:[{id:'h1',dogId:'dog_hana',type:'体重',date:'2026-08-01',value:'5.8 kg',sample:true},{id:'h2',dogId:'dog_p1',type:'ワクチン',date:'2026-07-20',value:'混合6種',attachmentStatus:'未添付',sample:true},{id:'h3',dogId:'dog_p2',type:'駆虫',date:'2026-07-22',value:'サンプル駆虫薬',sample:true},{id:'h4',dogId:'dog_hana',type:'投薬',date:'2026-08-10',value:'サンプル薬・1日1回',sample:true}],inspections:[],breeding:[{id:'breed_1',motherId:'dog_hana',fatherId:'dog_sora',stage:'妊娠確認待ち',matingDate:'2026-07-01',dueDate:'2026-09-02',events:[],sample:true},{id:'breed_2',motherId:'dog_coco',fatherId:'dog_sora',stage:'出産待ち',matingDate:'2026-06-15',dueDate:'2026-08-17',events:[{type:'妊娠確認',date:'2026-07-15',result:'妊娠確認'}],sample:true}],births:[{id:'birth_1',breedingId:'breed_done',motherId:'dog_hana',fatherId:'dog_sora',date:'2026-06-18',maleCount:2,femaleCount:3,healthyCount:5,illCount:0,deadCount:0,litterId:'litter_1',sample:true}],pickups:[{id:'pickup_1',dogId:'dog_p1',date:'2026-08-14',ownerName:'サンプルオーナー',status:'予定',sample:true}],attachments:[],uiPreferences:{dismissedPriorities:[]},settings:{handler:'サンプル担当者',kennelName:'サンプル犬舎'},createdAt:nowIso};
+  return {schemaVersion:SCHEMA_VERSION,dogs,health:[{id:'h1',dogId:'dog_hana',type:'体重',date:'2026-08-01',value:'5.8 kg',sample:true},{id:'h2',dogId:'dog_p1',type:'ワクチン',date:'2026-07-20',value:'混合6種',attachmentStatus:'未添付',sample:true},{id:'h3',dogId:'dog_p2',type:'駆虫',date:'2026-07-22',value:'サンプル駆虫薬',sample:true},{id:'h4',dogId:'dog_hana',type:'投薬',date:'2026-08-10',value:'サンプル薬・1日1回',sample:true}],inspections:[],breeding:[{id:'breed_1',motherId:'dog_hana',fatherId:'dog_sora',stage:'妊娠確認待ち',matingDates:[{id:'mdate_1',date:'2026-07-01',method:'自然交配',time:'',handler:'',memo:''}],matingDate:'2026-07-01',dueDateStart:'2026-09-02',dueDateEnd:'2026-09-02',dueDate:'2026-09-02',confirmedDueDate:'',confirmedDueDateBasis:'',events:[],sample:true},{id:'breed_2',motherId:'dog_coco',fatherId:'dog_sora',stage:'出産待ち',matingDates:[{id:'mdate_2',date:'2026-06-15',method:'自然交配',time:'',handler:'',memo:''}],matingDate:'2026-06-15',dueDateStart:'2026-08-17',dueDateEnd:'2026-08-17',dueDate:'2026-08-17',confirmedDueDate:'',confirmedDueDateBasis:'',events:[{type:'妊娠確認',date:'2026-07-15',result:'妊娠確認'}],sample:true}],births:[{id:'birth_1',breedingId:'breed_done',motherId:'dog_hana',fatherId:'dog_sora',date:'2026-06-18',maleCount:2,femaleCount:3,healthyCount:5,illCount:0,deadCount:0,litterId:'litter_1',sample:true}],pickups:[{id:'pickup_1',dogId:'dog_p1',date:'2026-08-14',ownerName:'サンプルオーナー',status:'予定',sample:true}],attachments:[],uiPreferences:{dismissedPriorities:[]},settings:{handler:'サンプル担当者',kennelName:'サンプル犬舎'},createdAt:nowIso};
 }
