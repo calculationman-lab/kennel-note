@@ -1,0 +1,15 @@
+{
+  "name": "犬舎ノート",
+  "short_name": "犬舎ノート",
+  "description": "犬舎の日常記録を片手で残す評価用アプリ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f5ed",
+  "theme_color": "#315c4a",
+  "lang": "ja",
+  "icons": [
+    {"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
