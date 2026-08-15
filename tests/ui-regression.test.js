@@ -26,7 +26,14 @@ test('京都府参考様式の入力と5帳簿出力を提供する',()=>{
 });
 
 test('複数交配日の追加・削除・編集と予定期間を提供する',()=>{
-  for(const text of ['＋交配日を追加','data-remove-mating-date','matingEdit','出産予定期間','獣医師等が確認した出産予定日'])assert.match(appSource,new RegExp(text));
+  for(const text of ['＋交配日を追加','data-remove-mating-date','matingEdit','出産予定時期','獣医師等が確認した出産予定日'])assert.match(appSource,new RegExp(text));
   assert.match(appSource,/同じ交配日は重複登録できません/);
   assert.match(appSource,/matingDates\(x\)\.map\(v=>v\.date\)\.join/);
+});
+
+test('交配の父母は候補付き自由入力で横スクロールを発生させない',()=>{
+  assert.match(appSource,/parentField\('母犬','motherName'/);
+  assert.match(appSource,/parentField\('父犬','fatherName'/);
+  assert.match(appSource,/登録済みの犬を選ぶか、名前を自由入力できます/);
+  assert.doesNotMatch(appSource,/select\('母犬','motherId'/);
 });
