@@ -1,6 +1,6 @@
 {
   "name": "kensha-note",
-  "version": "12.1.1",
+  "version": "12.1.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
     "prebuild": "pnpm prepare:ocr",
     "build": "vite build --base=./",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --test",
+    "test": "node --test tests/*.test.js",
     "typecheck": "tsc --noEmit --allowJs --checkJs --skipLibCheck --target ES2022 --module ES2022 --moduleResolution bundler src/app.js src/model.js src/db.js",
     "lint": "eslint src tests"
   },
