@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
 const appSource=await readFile(new URL('../src/app.js',import.meta.url),'utf8');
+const styleSource=await readFile(new URL('../src/styles.css',import.meta.url),'utf8');
 
 test('保存後はIndexedDBから読み直した状態を表示する',()=>{
   assert.match(appSource,/await saveState\(next\);const persisted=await loadState\(\)/);
@@ -57,4 +58,12 @@ test('v13.2は交配・妊娠・出産を1画面に統合する',()=>{
   assert.match(appSource,/form:'matingEdit'/);
   assert.match(appSource,/data-birth-hospital-wrap/);
   assert.match(appSource,/loaded\?migrateState\(loaded\):seedData\(\)/);
+});
+
+test('v13.3は引き渡し管理と3週間予定を統合する',()=>{
+  for(const text of ['引き渡しを記録','引き渡し予定日','引き渡し完了','オークションで販売した','お残し','最低引き渡し日齢','引き渡し可能予定','月曜始まり'])assert.match(appSource,new RegExp(text));
+  assert.doesNotMatch(appSource,/pickupPlan|pickupComplete/);
+  assert.doesNotMatch(appSource,/お迎え/);
+  assert.match(styleSource,/input\[type="date"\].*inline-size:100%/);
+  assert.match(styleSource,/transfer-checks\{grid-template-columns:1fr\}/);
 });
