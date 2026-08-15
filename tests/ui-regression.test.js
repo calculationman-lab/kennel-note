@@ -43,3 +43,9 @@ test('v13の法令・運用ルールを設定して警告と帳簿へ反映す�
   assert.match(appSource,/applyLedgerRules/);
   assert.match(appSource,/保存自体は禁止しません/);
 });
+
+test('v13.1の出産間隔・適用日・根拠メモ・変更履歴を提供する',()=>{
+  for(const text of ['前回出産から次回交配までの下限','適用開始日','根拠・参照先メモ','ルール変更履歴'])assert.match(appSource,new RegExp(text));
+  assert.match(appSource,/lastBirthDate/);
+  assert.match(appSource,/ruleHistory=normalizeRuleHistory/);
+});
